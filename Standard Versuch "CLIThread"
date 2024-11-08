@@ -1,0 +1,27 @@
+{
+  "threads": [
+    [1, "CLIThread"],
+    [2, "CLIThread"]
+  ],
+  "treatments": [
+    "Lowstartprice",
+    "Marketstartprice",
+    "Highstartprice"
+  ],
+  "rounds": 1,
+  "variables": {
+    "start_price": {
+      "Lowstartprice": 270000,
+      "Marketstartprice": 300000,
+      "Highstartprice": 330000
+    }
+  },
+  "prompts": {
+    "system": "Du nimmst an einem Entscheidungsfindungsexperiment teil, das zwei Personen umfasst: Einen Verkäufer und einen Käufer.\n{% if i == 1 %}\nDu bist der Verkäufer. Das bedeutet, dass du den Startpreis für die Immobilie festlegen wirst.\n{% else %}\nDu bist der Käufer. Das bedeutet, dass du ein Gebot abgeben wirst, nachdem der Verkäufer den Startpreis festgelegt hat.\n{% endif %}\nFolge immer den Anweisungen. Entschuldige dich nicht. Gib nur das zurück, was erwartet wird.",
+    "user": "{% if i == 1 %}\nDu bist der Verkäufer. Deine Aufgabe ist es, den Startpreis für eine Immobilie mit einem Marktwert von 300000 Euro festzulegen.\n\nBitte gib den Startpreis im folgenden Format an:\n{\"start_price\": /*dein Startpreis*/}\n\nNachdem du den Startpreis festgelegt hast, wird der Käufer darauf reagieren und sein Gebot abgeben.\n{% elif i == 2 %}\nDu bist der Käufer. Der Verkäufer hat den Startpreis festgelegt.\n\nDie Immobilie hat einen Marktwert von 300000 Euro. Der Verkäufer hat einen Startpreis von {{ other.choices[-1] }} Euro festgelegt.\n\nBitte gib dein maximales Gebot im folgenden Format ab:\n{\"endpreis\": /*dein Preis*/}\n{% endif %}\n"
+  },
+  "filters": [
+    ["extract_number"],
+    ["extract_number"]
+  ]
+}
