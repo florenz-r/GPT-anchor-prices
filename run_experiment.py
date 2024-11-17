@@ -1,82 +1,76 @@
-import json
-import random
+import openai
+import time
+from experiment_data import experiment_data  # Import the updated data
 
-# Beispiel-Daten für das Experiment
-experiment_data = {
-    "threads": [
-        [1, "GPTThread (GPT-4)"],
-        [2, "GPTThread (GPT-4)"]
-    ],
-    "treatments": [
-        "Lowstartprice",
-        "Marketstartprice",
-        "Highstartprice"
-    ],
-    "rounds": 10,
-    "variables": {
-        "start_price": {
-            "Lowstartprice": 270000,
-            "Marketstartprice": 300000,
-            "Highstartprice": 330000
-        }
-    },
-    "prompts": {
-        "system": (
-            "Du nimmst an einem Entscheidungsfindungsexperiment teil, das zwei Personen umfasst: "
-            "Einen Verkäufer und einen Käufer.\n"
-            "\n{% if i == 1 %}\n"
-            "Du bist der Verkäufer. Das bedeutet, dass du den Startpreis für die Immobilie festlegen wirst.\n"
-            "\n{% else %}\n"
-            "Du bist der Käufer. Das bedeutet, dass du ein Gebot abgeben wirst, nachdem der Verkäufer den Startpreis festgelegt hat.\n"
-            "\n{% endif %}\n"
-            "Folge immer den Anweisungen. Entschuldige dich nicht. Gib nur das zurück, was erwartet wird."
-        ),
-        "user": (
-            "{% if i == 1 %}\n"
-            "Du bist der Verkäufer. Deine Aufgabe ist es, den Startpreis für eine Immobilie mit einem Marktwert von 300000 Euro festzulegen.\n"
-            "\nBitte gib den Startpreis im folgenden Format an:\n"
-            "{\"start_price\": /*dein Startpreis*/}\n"
-            "Nachdem du den Startpreis festgelegt hast, wird der Käufer darauf reagieren und sein Gebot abgeben.\n"
-            "{% elif i == 2 %}\n"
-            "Du bist der Käufer. Der Verkäufer hat den Startpreis festgelegt.\n"
-            "Die Immobilie hat einen Marktwert von 300000 Euro. Der Verkäufer hat einen Startpreis von {{ other.choices[-1] }} Euro festgelegt.\n"
-            "Bitte gib dein maximales Gebot im folgenden Format ab:\n"
-            "{\"endpreis\": /*dein Preis*/}\n"
-            "{% endif %}\n"
-        )
-    },
-    "filters": [
-        ["extract_number"],
-        ["extract_number"],
-        ["JSON"],
-        ["JSON"]
-    ]
-}
+# Load the API key from a file
+def load_openai_key():
+    with open("openai_key", "r") as file:
+        return file.read().strip()
 
-# Funktion für das Experiment
+# Function for GPT-4 query
+def ask_gpt(system_prompt, user_prompt):
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        temperature=1  # Set temperature to 1
+    )
+    return response['choices'][0]['message']['content'].strip()
+
+# Function to run the experiment
 def run_experiment():
-    # Simulation für jeden Behandlung
+    # Load the API key
+    api_key = load_openai_key()
+    openai.api_key = api_key
+
+    # System prompt for the participant
+    system_prompt = (
+        "You are participating in an experiment where you need to evaluate a property. "
+        "Respond only with a number and no additional explanations."
+    )
+
+    # Iterate through the different anchor prices (treatments)
     for treatment in experiment_data["treatments"]:
-        start_price = experiment_data["variables"]["start_price"][treatment]
-        print(f"Behandlung: {treatment}, Startpreis: {start_price}")
+        start_price = treatment["start_price"]
+        treatment_name = treatment["treatment_name"]
+        print(f"Treatment: {treatment_name}, Starting Price: {start_price}")
 
         for round_num in range(1, experiment_data["rounds"] + 1):
-            print(f"Runde {round_num}")
+            print(f"Round {round_num}")
 
-            if round_num % 2 != 0:  # Verkäufer
-                user_prompt = f"Du bist der Verkäufer. Setze den Startpreis für die Immobilie fest: {start_price} Euro."
-                # Simuliere die Entscheidung des Verkäufers
-                seller_response = {"start_price": start_price}  # Hier könntest du die Logik erweitern
-                print(f"Antwort vom Verkäufer: {json.dumps(seller_response)}")
+            # User prompt based on property data
+            property_info = experiment_data["property"]
+            user_prompt_market_value = (
+                f"The seller has set a starting price of {start_price} euros for the property '{property_info['name']}' "
+                f"located in {property_info['location']}. It is {property_info['size']} in size and was built in {property_info['year_built']}. "
+                f"Property description: {property_info['description']} "
+                f"What do you think is the realistic market value of this property?"
+            )
 
-            else:  # Käufer
-                user_prompt = f"Du bist der Käufer. Der Verkäufer hat den Startpreis von {start_price} Euro festgelegt."
-                # Simuliere die Entscheidung des Käufers (ein einfaches zufälliges Gebot als Beispiel)
-                buyer_offer = random.randint(240000, 290000)  # Beispielangebot
-                buyer_response = {"endpreis": buyer_offer}
-                print(f"Antwort vom Käufer: {json.dumps(buyer_response)}")
+            # Ask GPT-4 for the estimated market value
+            estimated_market_value = ask_gpt(system_prompt, user_prompt_market_value)
+            print(f"Estimated Market Value: {estimated_market_value}")
 
-# Experiment starten
+            # Add a delay to avoid hitting the rate limit
+            time.sleep(1)
+
+            # User prompt for willingness to pay
+            user_prompt_payment = (
+                f"Now that you have estimated the market value to be {estimated_market_value} euros: "
+                f"How much would you be willing to pay for this property? "
+                f"Please make sure your answer is realistic based on the estimated value. "
+                f"Respond only with a number."
+            )
+
+            # Ask GPT-4 for willingness to pay
+            willingness_to_pay = ask_gpt(system_prompt, user_prompt_payment)
+            print(f"Willingness to Pay: {willingness_to_pay}")
+
+            # Add a delay to avoid hitting the rate limit
+            time.sleep(1)
+
+# Start the experiment
 if __name__ == "__main__":
     run_experiment()
-
