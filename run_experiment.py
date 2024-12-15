@@ -49,54 +49,48 @@ def run_experiment(file_name):
     # Write the header row
     write_header(file_name)
 
-    with open('experiment_results_1.csv', mode='w', newline='') as file:
-        writer = csv.writer(file, delimiter=';')
-        # Write the header row
-        writer.writerow(['Treatment', 'Market_Value_Estimation', 'Willingness_to_Pay'])
+    # Iterate through the different anchor prices (treatments)
+    for treatment in experiment_data["treatments"]:
+        start_price = treatment["start_price"]
+        treatment_name = treatment["treatment_name"]
+        print(f"Treatment: {treatment_name}, Starting Price: {start_price}")
 
+        for round_num in range(1, experiment_data["rounds"] + 1):
+            print(f"Round {round_num}")
 
-        # Iterate through the different anchor prices (treatments)
-        for treatment in experiment_data["treatments"]:
-            start_price = treatment["start_price"]
-            treatment_name = treatment["treatment_name"]
-            print(f"Treatment: {treatment_name}, Starting Price: {start_price}")
+            # User prompt based on property data
+            property_info = experiment_data["property"]
+            user_prompt_market_value = (
+                f"The seller has set a starting price of {start_price} euros for the property '{property_info['name']}' "
+                f"located in {property_info['location']}. It is {property_info['size']} in size and was built in {property_info['year_built']}. "
+                f"Property description: {property_info['description']} "
+                f"What do you think is the realistic market value of this property?"
+            )
 
-            for round_num in range(1, experiment_data["rounds"] + 1):
-                print(f"Round {round_num}")
+            # Ask GPT-4 for the estimated market value
+            estimated_market_value = ask_gpt(system_prompt, user_prompt_market_value)
+            print(f"Estimated Market Value: {estimated_market_value}")
 
-                # User prompt based on property data
-                property_info = experiment_data["property"]
-                user_prompt_market_value = (
-                    f"The seller has set a starting price of {start_price} euros for the property '{property_info['name']}' "
-                    f"located in {property_info['location']}. It is {property_info['size']} in size and was built in {property_info['year_built']}. "
-                    f"Property description: {property_info['description']} "
-                    f"What do you think is the realistic market value of this property?"
-                )
+            # Add a delay to avoid hitting the rate limit
+            time.sleep(1)
 
-                # Ask GPT-4 for the estimated market value
-                estimated_market_value = ask_gpt(system_prompt, user_prompt_market_value)
-                print(f"Estimated Market Value: {estimated_market_value}")
+            # User prompt for willingness to pay
+            user_prompt_payment = (
+                f"Now that you have estimated the market value to be {estimated_market_value} euros: "
+                f"How much would you be willing to pay for this property? "
+                f"Please make sure your answer is realistic based on the estimated value. "
+                f"Respond only with a number."
+            )
 
-                # Add a delay to avoid hitting the rate limit
-                time.sleep(1)
+            # Ask GPT-4 for willingness to pay
+            willingness_to_pay = ask_gpt(system_prompt, user_prompt_payment)
+            print(f"Willingness to Pay: {willingness_to_pay}")
 
-                # User prompt for willingness to pay
-                user_prompt_payment = (
-                    f"Now that you have estimated the market value to be {estimated_market_value} euros: "
-                    f"How much would you be willing to pay for this property? "
-                    f"Please make sure your answer is realistic based on the estimated value. "
-                    f"Respond only with a number."
-                )
+            # Write the results to the CSV file
+            write_row(file_name, treatment_name, estimated_market_value, willingness_to_pay)
 
-                # Ask GPT-4 for willingness to pay
-                willingness_to_pay = ask_gpt(system_prompt, user_prompt_payment)
-                print(f"Willingness to Pay: {willingness_to_pay}")
-
-                # Write the results to the CSV file
-                write_row(file_name, treatment_name, estimated_market_value, willingness_to_pay)
-
-                # Add a delay to avoid hitting the rate limit
-                time.sleep(1)
+            # Add a delay to avoid hitting the rate limit
+            time.sleep(1)
 
 # Start the experiment
 if __name__ == "__main__":
