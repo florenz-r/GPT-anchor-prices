@@ -12,8 +12,7 @@ experiment_data = {
             "The 4-room apartment includes 3 bedrooms, a spacious living room, a renovated bathroom, "
             "and a modern kitchen with built-in appliances. The apartment has a balcony overlooking a "
             "green courtyard. The building underwent extensive renovations in 2015, including modern "
-            "electric systems, new windows, and an updated heating system. The location is highly desirable, "
-            "with close proximity to the city center, the Aasee, and numerous cafés, schools, and shops."
+            "electric systems, new windows, and a modern heating system. "
         )
     },
     "treatments": [
